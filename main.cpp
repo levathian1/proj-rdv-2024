@@ -115,7 +115,10 @@ bool scene_intersect(const Vec3f &orig, const Vec3f &dir, const std::vector<Sphe
         if (spheres[i].ray_intersect(orig, dir, dist_i) && dist_i < spheres_dist) {
             spheres_dist = dist_i;
             hit = orig + dir*dist_i;
-            N = (hit - spheres[i].center).normalize();
+            float displacement = (sin(16*hit.x)*sin(16*hit.y)*sin(16*hit.z) + 1.)/2.;
+            N = (hit - spheres[i].center);
+            N.x += displacement; N.y += displacement; N.z += displacement;
+            N.normalize();
             material = spheres[i].material;
         }
     }
