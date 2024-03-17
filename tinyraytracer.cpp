@@ -12,9 +12,11 @@ struct Light {
 };
 
 struct Material {
-    Material(const Vec3f &color) : diffuse_color(color) {}
-    Material() : diffuse_color() {}
+    Material(const Vec2f &a, const Vec3f &color, const float &spec) : albedo(a), diffuse_color(color), specular_exponent(spec) {}
+    Material() : albedo(1,0), diffuse_color(), specular_exponent() {}
+    Vec2f albedo;
     Vec3f diffuse_color;
+    float specular_exponent;
 };
 
 struct Sphere {
@@ -58,6 +60,7 @@ struct Cone{
         if (discriminant < 0)
             return false;
 
+// Simplify this in landing code to save a precious line
         float sqrt_discriminant = sqrt(discriminant);
         float t1 = (-b + sqrt_discriminant) / (2 * a);
         float t2 = (-b - sqrt_discriminant) / (2 * a);
@@ -65,7 +68,7 @@ struct Cone{
         float t_min = std::min(t1, t2);
         float t_max = std::max(t1, t2);
 
-        float intersection_distance = L.z + t_min * dir.z; // Distance from the cone's base to the intersection point along the axis
+        float intersection_distance = L.z + t_min * dir.z;
 
         if (t_min > 0 && intersection_distance >= 0 && intersection_distance <= height) {
             t0 = t_min;
@@ -94,6 +97,10 @@ bool scene_intersect(const Vec3f &orig, const Vec3f &dir, const Cone &cone, Vec3
     return spheres_dist<1000;
 }
 
+Vec3f reflect(const Vec3f &I, const Vec3f &N) {
+    return I - N*2.f*(I*N);
+}
+
 Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, const Cone &cone, const std::vector<Light> &lights) {
     Vec3f point, N;
     Material material;
@@ -102,12 +109,24 @@ Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, const Cone &cone, const std:
         return Vec3f(0.2, 0.7, 0.8); // background color
     }
 
-    float diffuse_light_intensity = 0;
+    float diffuse_light_intensity = 0, specular_light_intensity = 0;
     for (size_t i=0; i<lights.size(); i++) {
         Vec3f light_dir      = (lights[i].position - point).normalize();
+
+        float light_distance = (lights[i].position - point).norm();
+
+// Replacing 1e-3 seems to solve weird checkered spot on the cone, as if there was a blind spot not reached correctly when calculating things
+// TODO: look into reason why
+        Vec3f shadow_orig = light_dir*N < 0 ? point - (N * 2) : point + (N * 2); // checking if the point lies in the shadow of the lights[i]
+        Vec3f shadow_pt, shadow_N;
+        Material tmpmaterial;
+        if (scene_intersect(shadow_orig, light_dir, cone, shadow_pt, shadow_N, tmpmaterial) && (shadow_pt-shadow_orig).norm() < light_distance)
+            continue;
+
         diffuse_light_intensity  += lights[i].intensity * std::max(0.f, light_dir*N);
+        specular_light_intensity += powf(std::max(0.f, -reflect(-light_dir, N)*dir), material.specular_exponent)*lights[i].intensity;
     }
-    return material.diffuse_color * diffuse_light_intensity;
+    return material.diffuse_color * diffuse_light_intensity* material.albedo[0] + Vec3f(1., 1., 1.)*specular_light_intensity * material.albedo[1];
 }
 
 void render(const Cone &cone, const std::vector<Light> &lights ) {
@@ -138,11 +157,13 @@ void render(const Cone &cone, const std::vector<Light> &lights ) {
 }
 
 int main() {
-    Material      ivory(Vec3f(0.4, 0.4, 0.3));
-    Material red_rubber(Vec3f(0.3, 0.1, 0.1));
-    Cone cone(Vec3f(-3, 0, -16), 2, 1, ivory);
+    Material      ivory(Vec2f(0.6,  0.3), Vec3f(0.4, 0.4, 0.3),   50.);
+    Material red_rubber(Vec2f(0.9,  0.1), Vec3f(0.3, 0.1, 0.1),   10.);
+    Cone cone(Vec3f(0, 3, -16), 2, 1, ivory);
     std::vector<Light>  lights;
     lights.push_back(Light(Vec3f(-20, 20,  20), 1.5));
+    lights.push_back(Light(Vec3f( 30, 50, -25), 1.8));
+    lights.push_back(Light(Vec3f( 30, 20,  30), 1.7));
 
     render(cone, lights);
 

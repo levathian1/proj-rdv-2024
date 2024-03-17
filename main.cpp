@@ -136,7 +136,8 @@ bool scene_intersect(const Vec3f &orig, const Vec3f &dir, const std::vector<Sphe
     return spheres_dist < 1000 || cones_dist < 1000;
 }
 
-// shadow calc for cone seems to be fragmented in parts TODO: figure out origin
+// shadow calc for cone seems to be fragmented in parts 
+// TODO: figure out origin
 // TODO: go over course on it again, some part of the old calc goofs up on the cone specifically
 Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, const std::vector<Sphere> &spheres, const std::vector<Cone> &cones, const std::vector<Light> &lights) {
     Vec3f point, N;
@@ -146,12 +147,24 @@ Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, const std::vector<Sphere> &s
         return Vec3f(0.2, 0.7, 0.8); // background color
     }
 
-    float diffuse_light_intensity = 0;
+    float diffuse_light_intensity = 0, specular_light_intensity = 0;
     for (size_t i=0; i<lights.size(); i++) {
         Vec3f light_dir      = (lights[i].position - point).normalize();
+
+        float light_distance = (lights[i].position - point).norm();
+
+// Replacing 1e-3 seems to solve weird checkered spot on the cone, as if there was a blind spot not reached correctly when calculating things
+// TODO: look into reason why
+        Vec3f shadow_orig = light_dir*N < 0 ? point - (N * 2) : point + (N * 2); // checking if the point lies in the shadow of the lights[i]
+        Vec3f shadow_pt, shadow_N;
+        Material tmpmaterial;
+        if (scene_intersect(shadow_orig, light_dir, spheres, cones, shadow_pt, shadow_N, tmpmaterial) && (shadow_pt-shadow_orig).norm() < light_distance)
+            continue;
+
         diffuse_light_intensity  += lights[i].intensity * std::max(0.f, light_dir*N);
+        specular_light_intensity += powf(std::max(0.f, -reflect(-light_dir, N)*dir), material.specular_exponent)*lights[i].intensity;
     }
-    return material.diffuse_color * diffuse_light_intensity;
+    return material.diffuse_color * diffuse_light_intensity* material.albedo[0] + Vec3f(1., 1., 1.)*specular_light_intensity * material.albedo[1];
 }
 
 void render(const std::vector<Sphere> &spheres, const std::vector<Cone> &cones, const std::vector<Light> &lights) {
@@ -177,7 +190,10 @@ int main() {
     Sphere sphere2(Vec3f(0, 0, -16), 2, ivory);
     Sphere sphere3(Vec3f(0, 3, -16), 2, red_rubber);
 
-    Cone cone(Vec3f(0, 3, -16), 0.5, 1, ivory);
+// Weird checker board shadowing on cone seems to be caused by incorrect lighting
+// Temp fix is to render cone larger and move it about to keep similar appearance while having it catch more light than previous
+// TODO: find nice lighting to go back to smaller cone in the original spot if possible
+    Cone cone(Vec3f(0, 6, -32), 1, 1, ivory);
 
     std::vector<Sphere> spheres;
     std::vector<Cone> cones;
@@ -191,6 +207,7 @@ int main() {
 
     lights.push_back(Light(Vec3f(-20, 20,  20), 1.5));
     lights.push_back(Light(Vec3f( 30, 50, -25), 1.8));
+    lights.push_back(Light(Vec3f( 10, 30, -10), 1.8));
     lights.push_back(Light(Vec3f( 30, 20,  30), 1.7));
 
     render(spheres, cones, lights);
