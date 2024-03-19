@@ -58,11 +58,11 @@ struct Cone{
 // readapt from circle version
      bool ray_intersect(const Vec3f &orig, const Vec3f &dir, float &t0) const {
         Vec3f L = orig - centre;
-        float tan_theta2 = (radius * radius) / (height * height);
+        float tan_theta = (radius) / (height);
 
-        float a = dir.x * dir.x + dir.y * dir.y - tan_theta2 * dir.z * dir.z;
-        float b = 2 * (L.x * dir.x + L.y * dir.y - tan_theta2 * L.z * dir.z);
-        float c = L.x * L.x + L.y * L.y - tan_theta2 * L.z * L.z;
+        float a = dir.x * dir.x + dir.y * dir.y - tan_theta * dir.z * dir.z;
+        float b = 2 * (L.x * dir.x + L.y * dir.y - tan_theta * L.z * dir.z);
+        float c = L.x * L.x + L.y * L.y - tan_theta * L.z * L.z;
 
         float discriminant = b * b - 4 * a * c;
         if (discriminant < 0)
@@ -114,14 +114,7 @@ Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, const Cone &cone, const std:
     Material material;
 
     if (!scene_intersect(orig, dir, cone, point, N, material)) {
-        float p1 = pow(dir.x, 2);
-        float p2 = pow(dir.z, 2);
-        float th = atan2f(dir.z, dir.x);
-        float l = (envmap_height/2)*(1-sin(atan2f(dir.y, sqrtf(p1+p2))));
-        float c = (envmap_width/2)*(1-(-th/M_PI));
-        float align = floor(envmap_width*l+1000);
-        return envmap[c+floor(l)*envmap_width];
-        // return Vec3f(0.2, 0.7, 0.8); // background color
+        return Vec3f(0.2, 0.7, 0.8); // background color
     }
 
     float diffuse_light_intensity = 0, specular_light_intensity = 0;

@@ -59,11 +59,11 @@ struct Cone{
 // readapt from circle version
     bool ray_intersect(const Vec3f &orig, const Vec3f &dir, float &t0) const {
         Vec3f L = orig - centre; // if ordered same way as test file, nothing is displayed anymore
-        float tan_theta2 = (radius * radius) / (height * height);
+        float tan_theta = (radius) / (height);
 
-        float a = dir.x * dir.x + dir.y * dir.y - tan_theta2 * dir.z * dir.z;
-        float b = 2 * (L.x * dir.x + L.y * dir.y - tan_theta2 * L.z * dir.z);
-        float c = L.x * L.x + L.y * L.y - tan_theta2 * L.z * L.z;
+        float a = dir.x * dir.x + dir.y * dir.y - tan_theta * dir.z * dir.z;
+        float b = 2 * (L.x * dir.x + L.y * dir.y - tan_theta * L.z * dir.z);
+        float c = L.x * L.x + L.y * L.y - tan_theta * L.z * L.z;
 
         float d = b * b - 4 * a * c;
         if (d < 0)
