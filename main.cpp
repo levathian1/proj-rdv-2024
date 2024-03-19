@@ -5,9 +5,17 @@
 #include <vector>
 #include "geometry.h"
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 const int WIDTH = 1024;
 const int HEIGHT = 768;
 const int FOV = M_PI/2;
+
+int envmap_width, envmap_height;
+std::vector<Vec3f> envmap;
 
 struct Material {
     Material(const Vec2f &a, const Vec3f &color, const float &spec) : albedo(a), diffuse_color(color), specular_exponent(spec) {}
@@ -144,7 +152,13 @@ Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, const std::vector<Sphere> &s
     Material material;
 
     if (!scene_intersect(orig, dir, spheres, cones, point, N, material)) {
-        return Vec3f(0.2, 0.7, 0.8); // background color
+        float p1 = pow(dir.x, 2);
+        float p2 = pow(dir.z, 2);
+        float th = atan2f(dir.z, dir.x);
+        float l = (envmap_height/2)*(1-sin(atan2f(dir.y, sqrtf(p1+p2))));
+        float c = (envmap_width/2)*(1-(-th/M_PI));
+        float align = floor(envmap_width*l+1000);
+        return envmap[c+floor(l)*envmap_width];
     }
 
     float diffuse_light_intensity = 0, specular_light_intensity = 0;
@@ -180,9 +194,35 @@ void render(const std::vector<Sphere> &spheres, const std::vector<Cone> &cones, 
     }
 
     save_to_file("file.ppm", framebuffer);
+
+    std::vector<unsigned char> pixmap(WIDTH*HEIGHT*3);
+    for (size_t i = 0; i < HEIGHT*WIDTH; ++i) {
+        Vec3f &c = framebuffer[i];
+        float max = std::max(c[0], std::max(c[1], c[2]));
+        if (max>1) c = c*(1./max);
+        for (size_t j = 0; j<3; j++) {
+            pixmap[i*3+j] = (unsigned char)(255 * std::max(0.f, std::min(1.f, framebuffer[i][j])));
+        }
+    }
+    stbi_write_jpg("out.jpg", WIDTH, HEIGHT, 3, pixmap.data(), 100);
 }
 
 int main() {
+
+    int n = -1;
+    unsigned char *pixmap = stbi_load("envmap.jpg", &envmap_width, &envmap_height, &n, 0);
+    if (!pixmap || 3!=n) {
+        std::cerr << "Error: can not load the environment map" << std::endl;
+        return -1;
+    }
+    envmap = std::vector<Vec3f>(envmap_width*envmap_height);
+    for (int j = envmap_height-1; j>=0 ; j--) {
+        for (int i = 0; i<envmap_width; i++) {
+            envmap[i+j*envmap_width] = Vec3f(pixmap[(i+j*envmap_width)*3+0], pixmap[(i+j*envmap_width)*3+1], pixmap[(i+j*envmap_width)*3+2])*(1/255.);
+        }
+    }
+    stbi_image_free(pixmap);
+
     Material ivory(Vec2f(0.6,  0.3), Vec3f(0.4, 0.4, 0.3),   50.);
     Material red_rubber(Vec2f(0.9,  0.1), Vec3f(0.3, 0.1, 0.1),   10.);
 
