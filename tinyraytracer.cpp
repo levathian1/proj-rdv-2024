@@ -58,11 +58,16 @@ struct Cone{
 // readapt from circle version
      bool ray_intersect(const Vec3f &orig, const Vec3f &dir, float &t0) const {
         Vec3f L = orig - centre;
+
+        // https://fr.wikipedia.org/wiki/C%C3%B4ne_(g%C3%A9om%C3%A9trie)
+        // TODO: check if you can actually get away with not squaring values
+        // cf: link above, tan is used squared to get x, y, z values
+        // but the original formula to calc cone params for equation i have doesn't need it
         float tan_theta = (radius) / (height);
 
-        float a = dir.x * dir.x + dir.y * dir.y - tan_theta * dir.z * dir.z;
-        float b = 2 * (L.x * dir.x + L.y * dir.y - tan_theta * L.z * dir.z);
-        float c = L.x * L.x + L.y * L.y - tan_theta * L.z * L.z;
+        float a = dir.x * dir.x + dir.y * dir.y - dir.z * dir.z;
+        float b = 2 * (L.x * dir.x + L.y * dir.y - L.z * dir.z);
+        float c = L.x * L.x + L.y * L.y - L.z * L.z;
 
         float discriminant = b * b - 4 * a * c;
         if (discriminant < 0)
