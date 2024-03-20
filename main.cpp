@@ -225,15 +225,20 @@ int main() {
 
     Material ivory(Vec2f(0.6,  0.3), Vec3f(0.7, 0.72, 0.7),   50.);
     Material red_rubber(Vec2f(0.9,  0.1), Vec3f(0.3, 0.1, 0.1),   10.);
+    Material black(Vec2f(0.6,  0.3), Vec3f(0.0, 0.0, 0.0), 50.);
 
-    Sphere sphere1(Vec3f(0, -3, -16), 2, ivory);
-    Sphere sphere2(Vec3f(0, 0, -16), 2, ivory);
-    Sphere sphere3(Vec3f(0, 3, -16), 2, ivory);
+    Sphere sphere1(Vec3f(0, -2, -16), 3, ivory);
+    Sphere sphere2(Vec3f(0, 2, -16), 2.5, ivory);
+    Sphere sphere3(Vec3f(0, 5, -16), 2, ivory);
+    Sphere lefteye(Vec3f(-0.5, 5.5, -15), 0.8, black);
+    Sphere righteye(Vec3f(0.5, 5.5, -15), 0.8, black);
+   
+
 
 // Weird checker board shadowing on cone seems to be caused by incorrect lighting
 // Temp fix is to render cone larger and move it about to keep similar appearance while having it catch more light than previous
 // TODO: find nice lighting to go back to smaller cone in the original spot if possible
-    Cone cone(Vec3f(0, 6, -32), 1, 1, red_rubber);
+    Cone cone(Vec3f(0, 11, -32), 1, 1, red_rubber);
 
     std::vector<Sphere> spheres;
     std::vector<Cone> cones;
@@ -242,6 +247,11 @@ int main() {
     spheres.push_back(sphere1);
     spheres.push_back(sphere2);
     spheres.push_back(sphere3);
+    spheres.push_back(lefteye);
+    spheres.push_back(righteye);
+    
+
+
 
     cones.push_back(cone);
 
