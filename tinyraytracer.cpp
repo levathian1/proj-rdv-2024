@@ -97,28 +97,65 @@ struct Cone{
     }
 };
 
-bool scene_intersect(const Vec3f &orig, const Vec3f &dir, const Cone &cone, Vec3f &hit, Vec3f &N, Material &material) {
-    float spheres_dist = std::numeric_limits<float>::max();
+struct Cylinder{
+    Vec3f centre;
+    float radius;
+    float height;
+    Material material;
+
+    Cylinder(const Vec3f &c, const float &r, const float &h, const Material &m) : centre(c), radius(r), height(h), material(m) {}
+
+    bool ray_intersect(const Vec3f &orig, const Vec3f &dir, float &t0) const {
+
+        Vec3f L = orig - centre; // if ordered same way as test file, nothing is displayed anymore
+
+        float a = dir.x * dir.x + dir.y * dir.y;
+        float b = 2 * (dir.x * L.x + dir.y * L.y);
+        float c = L.x * L.x + L.y * L.y - radius * radius;
+
+        float d = b * b - 4 * a * c;
+        if (d < 0)
+            return false;
+
+        float t1 = (-b + sqrt(d)) / (2 * a);
+        float t2 = (-b - sqrt(d)) / (2 * a);
+
+        float t;
+        if (t1 > t2)t = t1; else t = t2;
+
+        float z = L.z + t * dir.z;
+
+        if (z > 0 && z >= 0 && z <= height) {
+            return true;
+        }
+
+        return false;
+    }
+
+};
+
+bool scene_intersect(const Vec3f &orig, const Vec3f &dir, const Cylinder &cylinder, Vec3f &hit, Vec3f &N, Material &material) {
+    float cylinder_dist = std::numeric_limits<float>::max();
         float dist_i;
-        if (cone.ray_intersect(orig, dir, dist_i) && dist_i < spheres_dist) {
-            spheres_dist = dist_i;
+        if (cylinder.ray_intersect(orig, dir, dist_i) && dist_i < cylinder_dist) {
+            cylinder_dist = dist_i;
             hit = orig + dir*dist_i;
-            N = (hit - cone.centre).normalize();
-            material = cone.m;
+            N = (hit - cylinder.centre).normalize();
+            material = cylinder.material;
         }
     
-    return spheres_dist<1000;
+    return cylinder_dist<1000;
 }
 
 Vec3f reflect(const Vec3f &I, const Vec3f &N) {
     return I - N*2.f*(I*N);
 }
 
-Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, const Cone &cone, const std::vector<Light> &lights) {
+Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, const Cylinder &cylinder, const std::vector<Light> &lights) {
     Vec3f point, N;
     Material material;
 
-    if (!scene_intersect(orig, dir, cone, point, N, material)) {
+    if (!scene_intersect(orig, dir, cylinder, point, N, material)) {
         return Vec3f(0.2, 0.7, 0.8); // background color
     }
 
@@ -133,7 +170,7 @@ Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, const Cone &cone, const std:
         Vec3f shadow_orig = light_dir*N < 0 ? point - (N * 2) : point + (N * 2); // checking if the point lies in the shadow of the lights[i]
         Vec3f shadow_pt, shadow_N;
         Material tmpmaterial;
-        if (scene_intersect(shadow_orig, light_dir, cone, shadow_pt, shadow_N, tmpmaterial) && (shadow_pt-shadow_orig).norm() < light_distance)
+        if (scene_intersect(shadow_orig, light_dir, cylinder, shadow_pt, shadow_N, tmpmaterial) && (shadow_pt-shadow_orig).norm() < light_distance)
             continue;
 
         diffuse_light_intensity  += lights[i].intensity * std::max(0.f, light_dir*N);
@@ -142,7 +179,7 @@ Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, const Cone &cone, const std:
     return material.diffuse_color * diffuse_light_intensity* material.albedo[0] + Vec3f(1., 1., 1.)*specular_light_intensity * material.albedo[1];
 }
 
-void render(const Cone &cone, const std::vector<Light> &lights ) {
+void render(const Cylinder &cylinder, const std::vector<Light> &lights ) {
     const int width    = 1024;
     const int height   = 768;
     const int fov      = M_PI/2.;
@@ -154,7 +191,8 @@ void render(const Cone &cone, const std::vector<Light> &lights ) {
             float x =  (2*(i + 0.5)/(float)width  - 1)*tan(fov/2.)*width/(float)height;
             float y = -(2*(j + 0.5)/(float)height - 1)*tan(fov/2.);
             Vec3f dir = Vec3f(x, y, -1).normalize();
-            framebuffer[i+j*width] = cast_ray(Vec3f(0,0,0), dir, cone, lights);
+            // rotate cast ray to rotate piece to hopefully move cylinder
+            framebuffer[i+j*width] = cast_ray(Vec3f(3,1,2), dir, cylinder, lights);
         }
     }
     // std::ofstream ofs; // save the framebuffer to file
@@ -198,12 +236,13 @@ int main() {
     Material      ivory(Vec2f(0.6,  0.3), Vec3f(0.4, 0.4, 0.3),   50.);
     Material red_rubber(Vec2f(0.9,  0.1), Vec3f(0.3, 0.1, 0.1),   10.);
     Cone cone(Vec3f(0, 3, -16), 2, 1, ivory);
+    Cylinder cylinder(Vec3f(0, -3, 3), 2, 7, ivory);
     std::vector<Light>  lights;
     lights.push_back(Light(Vec3f(-20, 20,  20), 1.5));
     lights.push_back(Light(Vec3f( 30, 50, -25), 1.8));
     lights.push_back(Light(Vec3f( 30, 20,  30), 1.7));
 
-    render(cone, lights);
+    render(cylinder, lights);
 
     return 0;
 }

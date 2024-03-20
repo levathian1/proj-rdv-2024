@@ -91,11 +91,47 @@ struct Cone{
     }
 };
 
+struct Cylinder{
+    Vec3f centre;
+    float radius;
+    float height;
+    Material material;
+
+    Cylinder(const Vec3f &c, const float &r, const float &h, const Material &m) : centre(c), radius(r), height(h), material(m) {}
+
+    bool ray_intersect(const Vec3f &orig, const Vec3f &dir, float &t0) const {
+
+        Vec3f L = orig - centre; // if ordered same way as test file, nothing is displayed anymore
+
+        float a = dir.x * dir.x + dir.y * dir.y;
+        float b = 2 * (dir.x * L.x + dir.y * L.y);
+        float c = L.x * L.x + L.y * L.y - radius * radius;
+
+        float d = b * b - 4 * a * c;
+        if (d < 0)
+            return false;
+
+        float t1 = (-b + sqrt(d)) / (2 * a);
+        float t2 = (-b - sqrt(d)) / (2 * a);
+
+        float z = L.z + t1 * dir.z;
+
+        if(z <= 1){
+            return true;
+        }
+
+        return false;
+    }
+
+};
+
 struct Light {
     Light(const Vec3f &p, const float &i) : position(p), intensity(i) {}
     Vec3f position;
     float intensity;
 };
+
+// Perlin noise algorithm implementation from wikipedia with amendment to interp weights
 
 float interpolate(float a0, float a1, float w) {
     // You may want clamping by inserting:
