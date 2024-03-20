@@ -223,17 +223,17 @@ int main() {
     }
     stbi_image_free(pixmap);
 
-    Material ivory(Vec2f(0.6,  0.3), Vec3f(0.4, 0.4, 0.3),   50.);
+    Material ivory(Vec2f(0.6,  0.3), Vec3f(0.7, 0.72, 0.7),   50.);
     Material red_rubber(Vec2f(0.9,  0.1), Vec3f(0.3, 0.1, 0.1),   10.);
 
     Sphere sphere1(Vec3f(0, -3, -16), 2, ivory);
     Sphere sphere2(Vec3f(0, 0, -16), 2, ivory);
-    Sphere sphere3(Vec3f(0, 3, -16), 2, red_rubber);
+    Sphere sphere3(Vec3f(0, 3, -16), 2, ivory);
 
 // Weird checker board shadowing on cone seems to be caused by incorrect lighting
 // Temp fix is to render cone larger and move it about to keep similar appearance while having it catch more light than previous
 // TODO: find nice lighting to go back to smaller cone in the original spot if possible
-    Cone cone(Vec3f(0, 6, -32), 1, 1, ivory);
+    Cone cone(Vec3f(0, 6, -32), 1, 1, red_rubber);
 
     std::vector<Sphere> spheres;
     std::vector<Cone> cones;
