@@ -1,9 +1,13 @@
 # build files & vscode 
 build/
 .vscode/
+lib/
 
 # Prerequisites
 *.d
+
+*.jpg
+*.ppm
 
 # Compiled Object files
 *.slo

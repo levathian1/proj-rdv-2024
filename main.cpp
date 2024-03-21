@@ -193,7 +193,7 @@ float noise(float x, float y) {
     // Determine interpolation weights
     // Could also use higher order polynomial/s-curve here
     // Fixing values here instead of original to force positive values at all times
-    float sx = 0.4;
+    float sx = 0.7;
     float sy = 0.3;
 
     // std::cout << x << " " << x0 << "\n";
@@ -234,6 +234,14 @@ Vec3f reflect(const Vec3f &I, const Vec3f &N) {
     return I - N*2.f*(I*N);
 }
 
+
+float signed_distance(const Vec3f &p, float sphere_radius) {
+    Vec3f s = Vec3f(p).normalize(sphere_radius);
+    float displacement = sin(16*s.x)*sin(16*s.y)*sin(16*s.z)*0.2;
+    return sqrt(p.x*p.x+p.y*p.y+p.z*p.z) - (sphere_radius + displacement);
+}
+
+
 bool scene_intersect(const Vec3f &orig, const Vec3f &dir, const std::vector<Sphere> &spheres, const std::vector<Cone> &cones, Vec3f &hit, Vec3f &N, Material &material) {
     float spheres_dist = std::numeric_limits<float>::max();
     float cones_dist = std::numeric_limits<float>::max();
@@ -242,9 +250,11 @@ bool scene_intersect(const Vec3f &orig, const Vec3f &dir, const std::vector<Sphe
         if (spheres[i].ray_intersect(orig, dir, dist_i) && dist_i < spheres_dist) {
             spheres_dist = dist_i;
             hit = orig + dir*dist_i;
+            Vec3f light_dir = (Vec3f(10, 10, 10) - hit).normalize();
+            float dist = signed_distance(dir, spheres[i].radius);
             float displacement = (sin(16*hit.x)*sin(16*hit.y)*sin(16*hit.z) + 1.)/2.;
             N = (hit - spheres[i].center);
-            N.x += displacement; N.y += displacement; N.z += displacement;
+            N.x += displacement*dist; N.y += displacement*dist; N.z += displacement*dist    ;
             N.normalize();
             material = spheres[i].material;
         }
@@ -261,6 +271,7 @@ bool scene_intersect(const Vec3f &orig, const Vec3f &dir, const std::vector<Sphe
     }
     return spheres_dist < 1000 || cones_dist < 1000;
 }
+
 
 // shadow calc for cone seems to be fragmented in parts 
 // TODO: figure out origin
@@ -313,6 +324,11 @@ void render(const std::vector<Sphere> &spheres, const std::vector<Cone> &cones, 
             float y = -(2*(j + 0.5)/(float)HEIGHT - 1)*tan(FOV/2.);
             Vec3f dir = Vec3f(x, y, -1).normalize();
             framebuffer[i+j*WIDTH] = cast_ray(Vec3f(0,0,0), dir, spheres, cones, lights);
+            float noise_val = noise(i, j);
+            if(noise_val > 0.5){
+                framebuffer[i+j*WIDTH] = Vec3f(255, 255, 255);
+                perlin[i+j*WIDTH] = Vec3f(255, 255, 255);
+            }
         }
     }
 
@@ -329,24 +345,6 @@ void render(const std::vector<Sphere> &spheres, const std::vector<Cone> &cones, 
         }
     }
 
-    for (size_t i = 0; i < HEIGHT*WIDTH; ++i) {
-        Vec3f &c = framebuffer[i];
-        float max = std::max(c[0], std::max(c[1], c[2]));
-        if (max>1) c = c*(1./max);
-        for (size_t j = 0; j<3; j++) {
-            // pixmap[i*3+j] = (unsigned char)(255 * std::max(0.f, std::min(1.f, framebuffer[i][j])));
-            float noise_val = noise(i, j);
-            // TODO: look into pixel discoloration at the end 
-            if(noise_val > 0.5){
-                pixmap[i*3+j] = 255;
-                pixmap[i*3+j+1] = 255;
-                pixmap[i*3+j+2] = 255;
-                perlin[i+j] = Vec3f(255, 255, 255);
-            }
-        }
-
-    }
-
     save_to_file("pog.ppm", perlin);
     stbi_write_jpg("out.jpg", WIDTH, HEIGHT, 3, pixmap.data(), 100);
 }
@@ -354,7 +352,7 @@ void render(const std::vector<Sphere> &spheres, const std::vector<Cone> &cones, 
 int main() {
 
     int n = -1;
-    unsigned char *pixmap = stbi_load("envmap.jpg", &envmap_width, &envmap_height, &n, 0);
+    unsigned char *pixmap = stbi_load("envmap5.jpg", &envmap_width, &envmap_height, &n, 0);
     if (!pixmap || 3!=n) {
         std::cerr << "Error: can not load the environment map" << std::endl;
         return -1;

@@ -236,7 +236,7 @@ int main() {
     Material      ivory(Vec2f(0.6,  0.3), Vec3f(0.4, 0.4, 0.3),   50.);
     Material red_rubber(Vec2f(0.9,  0.1), Vec3f(0.3, 0.1, 0.1),   10.);
     Cone cone(Vec3f(0, 3, -16), 2, 1, ivory);
-    Cylinder cylinder(Vec3f(0, -3, 3), 2, 7, ivory);
+    Cylinder cylinder(Vec3f(0, 0, -16), 0.5, 20, ivory);
     std::vector<Light>  lights;
     lights.push_back(Light(Vec3f(-20, 20,  20), 1.5));
     lights.push_back(Light(Vec3f( 30, 50, -25), 1.8));
