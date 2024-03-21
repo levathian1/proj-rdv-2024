@@ -114,9 +114,12 @@ struct Cylinder{
         float t1 = (-b + sqrt(d)) / (2 * a);
         float t2 = (-b - sqrt(d)) / (2 * a);
 
-        float z = L.z + t1 * dir.z;
+        float t;
+        if (t1 > t2)t = t2; else t = t1;
 
-        if(z <= 1){
+        float z = L.z + t * dir.z;
+
+        if (z > 0 && z >= 0 && z <= height) {
             return true;
         }
 
@@ -242,7 +245,7 @@ float signed_distance(const Vec3f &p, float sphere_radius) {
 }
 
 
-bool scene_intersect(const Vec3f &orig, const Vec3f &dir, const std::vector<Sphere> &spheres, const std::vector<Cone> &cones, Vec3f &hit, Vec3f &N, Material &material) {
+bool scene_intersect(const Vec3f &orig, const Vec3f &dir, const std::vector<Sphere> &spheres, const std::vector<Cone> &cones, const Cylinder cylinder, Vec3f &hit, Vec3f &N, Material &material) {
     float spheres_dist = std::numeric_limits<float>::max();
     float cones_dist = std::numeric_limits<float>::max();
     for (size_t i=0; i < spheres.size(); i++) {
@@ -269,6 +272,15 @@ bool scene_intersect(const Vec3f &orig, const Vec3f &dir, const std::vector<Sphe
             material = cones[i].material;
         }
     }
+    // float cylinder_dist = std::numeric_limits<float>::max();
+    //     float dist_i;
+    //     if (cylinder.ray_intersect(orig, dir, dist_i) && dist_i < cylinder_dist) {
+    //         cylinder_dist = dist_i;
+    //         hit = orig + dir*dist_i;
+    //         N = (hit - cylinder.centre).normalize();
+    //         material = cylinder.material;
+    //     }
+    
     return spheres_dist < 1000 || cones_dist < 1000;
 }
 
@@ -276,11 +288,11 @@ bool scene_intersect(const Vec3f &orig, const Vec3f &dir, const std::vector<Sphe
 // shadow calc for cone seems to be fragmented in parts 
 // TODO: figure out origin
 // TODO: go over course on it again, some part of the old calc goofs up on the cone specifically
-Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, const std::vector<Sphere> &spheres, const std::vector<Cone> &cones, const std::vector<Light> &lights) {
+Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, const std::vector<Sphere> &spheres, const std::vector<Cone> &cones, const Cylinder cylinder, const std::vector<Light> &lights) {
     Vec3f point, N;
     Material material;
 
-    if (!scene_intersect(orig, dir, spheres, cones, point, N, material)) {
+    if (!scene_intersect(orig, dir, spheres, cones, cylinder, point, N, material)) {
         float p1 = pow(dir.x, 2);
         float p2 = pow(dir.z, 2);
         float th = atan2f(dir.z, dir.x);
@@ -301,7 +313,7 @@ Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, const std::vector<Sphere> &s
         Vec3f shadow_orig = light_dir*N < 0 ? point - (N * 2) : point + (N * 2); // checking if the point lies in the shadow of the lights[i]
         Vec3f shadow_pt, shadow_N;
         Material tmpmaterial;
-        if (scene_intersect(shadow_orig, light_dir, spheres, cones, shadow_pt, shadow_N, tmpmaterial) && (shadow_pt-shadow_orig).norm() < light_distance)
+        if (scene_intersect(shadow_orig, light_dir, spheres, cones, cylinder, shadow_pt, shadow_N, tmpmaterial) && (shadow_pt-shadow_orig).norm() < light_distance)
             continue;
 
         diffuse_light_intensity  += lights[i].intensity * std::max(0.f, light_dir*N);
@@ -310,7 +322,7 @@ Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, const std::vector<Sphere> &s
     return material.diffuse_color * diffuse_light_intensity* material.albedo[0] + Vec3f(1., 1., 1.)*specular_light_intensity * material.albedo[1];
 }
 
-void render(const std::vector<Sphere> &spheres, const std::vector<Cone> &cones, const std::vector<Light> &lights) {
+void render(const std::vector<Sphere> &spheres, const std::vector<Cone> &cones, const Cylinder cylinder, const std::vector<Light> &lights) {
     std::vector<Vec3f> framebuffer(WIDTH*HEIGHT);
     std::vector<Vec3f> perlin(WIDTH*HEIGHT*3);
 
@@ -323,7 +335,7 @@ void render(const std::vector<Sphere> &spheres, const std::vector<Cone> &cones, 
             float x =  (2*(i + 0.5)/(float)WIDTH - 1)*tan(FOV/2.)*WIDTH/(float)HEIGHT;
             float y = -(2*(j + 0.5)/(float)HEIGHT - 1)*tan(FOV/2.);
             Vec3f dir = Vec3f(x, y, -1).normalize();
-            framebuffer[i+j*WIDTH] = cast_ray(Vec3f(0,0,0), dir, spheres, cones, lights);
+            framebuffer[i+j*WIDTH] = cast_ray(Vec3f(0,0,0), dir, spheres, cones, cylinder, lights);
             float noise_val = noise(i, j);
             if(noise_val > 0.5){
                 framebuffer[i+j*WIDTH] = Vec3f(255, 255, 255);
@@ -416,6 +428,8 @@ int main() {
     lights.push_back(Light(Vec3f( 10, 30, -10), 1.8));
     lights.push_back(Light(Vec3f( 30, 20,  30), 1.7));
 
-    render(spheres, cones, lights);
+    Cylinder cylinder(Vec3f(0, 0, -16), 0.5, 20, ivory);
+
+    render(spheres, cones, cylinder, lights);
     return 0;
 }
