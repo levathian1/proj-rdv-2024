@@ -377,6 +377,13 @@ int main() {
     Sphere lefteye(Vec3f(-0.5, 5.5, -15), 0.8, black);
     Sphere righteye(Vec3f(0.5, 5.5, -15), 0.8, black);
    
+    Sphere b1(Vec3f(0, 1.5, -13), 0.2, black);
+    Sphere b2(Vec3f(0, 3, -13), 0.2, black);
+    Sphere b3(Vec3f(0, 0, -13), 0.2, black);
+    Sphere b4(Vec3f(0, -1.5, -13), 0.2, black);
+    Sphere b5(Vec3f(0, -3, -13), 0.2, black);
+   // Sphere b6(Vec3f(2.7, 2.5, -15), 0.8, ivory);
+    //Sphere b7(Vec3f(-2.7, 2.5, -15), 0.8, ivory);
 
 
 // Weird checker board shadowing on cone seems to be caused by incorrect lighting
@@ -393,6 +400,13 @@ int main() {
     spheres.push_back(sphere3);
     spheres.push_back(lefteye);
     spheres.push_back(righteye);
+    spheres.push_back(b1);
+    spheres.push_back(b2);
+    spheres.push_back(b3);
+    spheres.push_back(b4);
+    spheres.push_back(b5);
+   // spheres.push_back(b6);
+    //spheres.push_back(b7);
     
 
 
