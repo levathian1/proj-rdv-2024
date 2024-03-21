@@ -121,7 +121,7 @@ struct Cylinder{
         float t2 = (-b - sqrt(d)) / (2 * a);
 
         float t;
-        if (t1 > t2)t = t1; else t = t2;
+        if (t1 > t2)t = t2; else t = t1;
 
         float z = L.z + t * dir.z;
 
